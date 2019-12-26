@@ -1,0 +1,306 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+features <- read.csv(file='/Users/seanc/Desktop/CSE 160 Final Project/features.csv')
+stores <- read.csv(file='/Users/seanc/Desktop/CSE 160 Final Project/stores.csv')
+train <- read.csv(file='/Users/seanc/Desktop/CSE 160 Final Project/train.csv')
+```
+
+
+```{r}
+features$Date<- as.Date(features$Date, format="%Y-%m-%d")
+train$Date <- as.Date(train$Date, format="%Y-%m-%d")
+
+features$MarkDown1[is.na(features$MarkDown1)] <- 0
+
+features$MarkDown2[is.na(features$MarkDown2)] <- 0
+
+features$MarkDown3[is.na(features$MarkDown3)] <- 0
+
+features$MarkDown4[is.na(features$MarkDown4)] <- 0
+
+features$MarkDown5[is.na(features$MarkDown5)] <- 0
+
+dataset <- train
+featureset <- features
+featureset <- merge(featureset, stores, by="Store", all.x=TRUE)
+```
+
+```{r}
+library(lubridate)
+
+dataset$Month <- month(dataset$Date)
+dataset$Day <- day(dataset$Date)
+
+featureset$Month <- month(featureset$Date)
+featureset$Day <- day(featureset$Date)
+
+featureset$Date <- NULL
+dataset$Date <- NULL
+
+featureset$IsHoliday <- NULL
+dataset$IsHoliday <- NULL
+
+rm(features)
+rm(train)
+rm(stores)
+```
+
+
+```{r}
+ds <- merge(dataset, featureset, by=c("Store", "Month", "Day"))
+rm(dataset)
+rm(featureset)
+
+```
+
+```{r}
+markdowns <- ds[c("MarkDown1", "MarkDown2", "MarkDown3", "MarkDown4", "MarkDown5")]
+str(markdowns)
+mean(markdowns$MarkDown1)
+mean(markdowns$MarkDown2)
+mean(markdowns$MarkDown3)
+mean(markdowns$MarkDown4)
+mean(markdowns$MarkDown5)
+
+
+```
+
+
+```{r}
+
+rm(markdowns)
+
+ds$Date <- ds$Date.x
+
+```
+
+
+
+
+```{r}
+library(ggplot2)
+# qplot(data=ds, x=Fuel_Price, y=Weekly_Sales, xlab="Fuel Price", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs Fuel Price")
+#  
+# qplot(data=ds, x=Date, y=Weekly_Sales, xlab="Date", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs Date")
+#  
+# qplot(data=ds, x=Temperature, y=Weekly_Sales, xlab="Temperature", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs Temperature")
+#  
+# qplot(data=ds, x=MarkDown1, y=Weekly_Sales, xlab="MarkDown1", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs MarkDown1")
+#  
+# qplot(data=ds, x=MarkDown2, y=Weekly_Sales, xlab="MarkDown2", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs MarkDown2")
+#  
+# qplot(data=ds, x=MarkDown3, y=Weekly_Sales, xlab="MarkDown3", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs MarkDown3")
+# 
+# qplot(data=ds, x=MarkDown4, y=Weekly_Sales, xlab="MarkDown4", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs MarkDown4")
+# 
+# qplot(data=ds, x=MarkDown5, y=Weekly_Sales, xlab="MarkDown5", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs MarkDown5")
+# 
+# qplot(data=ds, x=CPI, y=Weekly_Sales, xlab="CPI", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs CPI")
+# 
+# qplot(data=ds, x=Unemployment, y=Weekly_Sales, xlab="Unemployment", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs Unemployment")
+# 
+# qplot(data=ds, x=Size, y=Weekly_Sales, xlab="Size", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs Store Size")
+# 
+# qplot(data=ds, x=Store, y=Weekly_Sales, xlab="Store", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs Store Number")
+# 
+# qplot(data=ds, x=Dept, y=Weekly_Sales, xlab="Store", color=Type, ylab="Weekly Sales ($)", main="Weekly Sales vs Department Number")
+```
+
+
+```{r}
+# Third Correlogram Example
+correl <- ds
+correl$Store <- NULL
+correl$Date <- NULL
+correl$Dept <- NULL
+correl$Size <- as.numeric(correl$Size)
+correl$Type <- NULL
+correl$isHoliday <- NULL
+
+correl <- cor(correl)
+library(corrplot)
+
+# corrplot(correl, order="AOE", method="color")
+#   
+```
+
+My classifiers include KNN (for regression),  Support vector machines (regression), and Neural Networks.
+
+We know that our store is of type B.  Therefore, we don't need to train our classifier on the class, and we can eliminate it from the dataset
+
+```{r}
+rm(correl)
+dataset <- subset(ds, ds$Type == "B")
+dataset$Type <- NULL
+dataset$Store <- factor(dataset$Store)
+dataset$Dept <- as.numeric(dataset$Dept)
+
+```
+
+```{r}
+ uniqueStores <- unique(dataset$Store)
+ 
+ # for(i in uniqueStores){
+ #   trainSet <- dataset[dataset$Store != i,]
+ #   testSet <- dataset[dataset$Store == i,]
+ #   model <- glm(Weekly_Sales ~ Temperature + Fuel_Price + MarkDown1 + MarkDown2 + MarkDown3 + MarkDown4 + MarkDown5 + Month + Day + CPI + Unemployment + Size, data=trainSet)
+ #   predictions <- predict(model, testSet, type="response")
+ #   actuals <- testSet$Weekly_Sales
+ #   finalFrame <- rbind(finalFrame, data.frame(predicted = predictions, actual = actuals))
+ #   k <- k + 1
+ # }
+ # 
+ # finalFrame$diff <- finalFrame$predicted - finalFrame$actual
+ # 
+ # finalFrame$sqDiff <- (finalFrame$diff)^2
+ # 
+ # sum(finalFrame$sqDiff)/nrow(finalFrame)
+ # 
+ # rsq <- function (x, y) cor(x, y) ^ 2
+ # 
+ # rsq(finalFrame$actual, finalFrame$predicted)
+
+# plot(finalFrame$actual, finalFrame$predicted)
+
+```
+
+Creating the dataset for random forest
+
+```{r}
+forestSet <- subset(dataset, as.numeric(dataset$Store) <= 25)
+forestSet$Day <- NULL
+forestSet <- subset(forestSet, as.numeric(forestSet$Dept) <= 25)
+
+forestSet$Dept <- as.numeric(forestSet$Dept)
+forestSet$Dept <- factor(forestSet$Dept)
+forestSet$Date <- NULL
+
+forestSet$IsHoliday <- NULL
+
+forestSet <- subset(forestSet, forestSet$Month > 6)
+forestSet <- subset(forestSet, forestSet$Month < 8)
+
+forestSet$LastWeekSales <- forestSet$Weekly_Sales
+
+forestSet$Month <- NULL
+```
+
+
+```{r}
+
+storez <- unique(forestSet$Store)
+
+ff <- data.frame()
+
+library(randomForest)
+for(h in storez){
+  trainSet <- forestSet[forestSet$Store != h,]
+  testSet <- forestSet[forestSet$Store == h,]
+  
+  forest <- randomForest(Weekly_Sales ~ ., data = trainSet, importance = TRUE, ntree = 50, na.action=na.roughfix)
+  
+  forestpredictions <- predict(object=forest, newdata=testSet, OOB=TRUE, type="response")
+  ff <- rbind(ff, data.frame(forestpredicted = forestpredictions, actual = testSet$Weekly_Sales))
+}
+
+
+```
+
+```{r}
+ff$diff <- ff$forestpredicted - ff$actual
+
+ff$sqDiff <- (ff$diff)^2
+
+sum(ff$sqDiff)/nrow(ff)
+
+rsq <- function (x, y) cor(x, y) ^ 2
+
+rsq(ff$actual, ff$forestpredicted)
+
+library(ggplot2)
+
+P<- qplot(data=ff, x=forestpredicted, y=actual, xlab="Predicted Weekly Sales($)", ylab="Actual Weekly Sales($)", main="Actual vs Predicted Weekly Sales")
+P + stat_smooth(method="lm")
+```
+
+
+
+```{r}
+library(e1071)
+
+svmSet <- forestSet
+
+svmframe <- data.frame()
+
+for(l in storez){
+  trainSet <- svmSet[svmSet$Store != l,]
+  testSet <- svmSet[svmSet$Store == l,]
+  
+  model <- svm(Weekly_Sales ~ ., data = trainSet, method="response")
+  
+  svmpredictions <- predict(object=model, newdata=testSet, OOB=TRUE, type="response")
+  svmframe <- rbind(svmframe, data.frame(svmpredicted = svmpredictions, actual = testSet$Weekly_Sales))
+}
+```
+
+```{r}
+svmframe$diff <- svmframe$svmpredicted - svmframe$actual
+
+svmframe$sqDiff <- (svmframe$diff)^2
+
+sum(svmframe$sqDiff)/nrow(svmframe)
+
+rsq <- function (x, y) cor(x, y) ^ 2
+
+rsq(svmframe$actual, svmframe$svmpredicted)
+
+library(ggplot2)
+
+X <- qplot(data=svmframe, x=svmpredicted, y=actual, xlab="Predicted Weekly Sales($)", ylab="Actual Weekly Sales($)", main="Actual vs Predicted Weekly Sales")
+X + stat_smooth(method="lm")
+```
+
+
+```{r}
+library(kknn)
+
+knnSet <- forestSet
+
+knnframe <- data.frame()
+
+for(m in storez){
+  trainSet <- knnSet[knnSet$Store != m,]
+  testSet <- knnSet[knnSet$Store == m,]
+  
+  knnPredictor <- kknn(train=trainSet, formula=Weekly_Sales ~ ., test=testSet)
+  
+  knnpredictions <- predict(object=knnPredictor, newdata=testSet)
+  knnframe <- rbind(knnframe, data.frame(KNNpredicted = knnpredictions, actual = testSet$Weekly_Sales))
+}
+```
+
+```{r}
+knnframe$diff <- knnframe$KNNpredicted - knnframe$actual
+
+knnframe$sqDiff <- (knnframe$diff)^2
+
+sum(knnframe$sqDiff)/nrow(knnframe)
+
+rsq <- function (x, y) cor(x, y) ^ 2
+
+rsq(knnframe$actual, knnframe$KNNpredicted)
+
+library(ggplot2)
+
+X <- qplot(data=knnframe, x=KNNpredicted, y=actual, xlab="Predicted Weekly Sales($)", ylab="Actual Weekly Sales($)", main="Actual vs Predicted Weekly Sales")
+X + stat_smooth(method="lm")
+```
+
